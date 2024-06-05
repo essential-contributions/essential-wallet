@@ -33,4 +33,12 @@ Options:
 $ essential-wallet sign my_key data "0011224455667788"
 $ ef6e089abc7e23e589b4476819cd4b222dda4dd10d959e8c738141e9207af0bd6fb03e25dea74c77e6dec341a6c5fd0cf5e04937b1e0fa6a6b0e0c6fe4d28b680000000000000001
 ```
-
+## Nix
+The wallet can be run with:
+```bash
+nix run .#wallet
+```
+There is a development shell available with:
+```bash
+nix develop
+```
