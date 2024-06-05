@@ -178,7 +178,13 @@ fn extract_name_and_scheme(name: &str) -> Result<(String, Scheme), anyhow::Error
     let n = list()?
         .find(|n| n.contains(name))
         .ok_or_else(|| anyhow::anyhow!("No key pair found for name: {}", name))?;
+
+    #[cfg(target_os = "macos")]
     let mut iter = n.split(':').skip(1);
+
+    #[cfg(target_os = "linux")]
+    let mut iter = n.split(':');
+
     let scheme = iter
         .next()
         .ok_or_else(|| anyhow::anyhow!("Account name corrupted for {} got {}", name, n))?;
@@ -187,6 +193,7 @@ fn extract_name_and_scheme(name: &str) -> Result<(String, Scheme), anyhow::Error
     Ok((full_name, scheme))
 }
 
+#[cfg(target_os = "macos")]
 /// List all accounts under this service.
 fn list() -> anyhow::Result<impl Iterator<Item = String>> {
     let list = cryptex::OsKeyRing::list_secrets()?;
@@ -194,6 +201,16 @@ fn list() -> anyhow::Result<impl Iterator<Item = String>> {
         .into_iter()
         .filter(|map| map.get("service").map_or(false, |s| s == SERVICE_NAME))
         .filter_map(|map| map.get("account").cloned()))
+}
+
+#[cfg(target_os = "linux")]
+/// List all accounts under this service.
+fn list() -> anyhow::Result<impl Iterator<Item = String>> {
+    let list = cryptex::OsKeyRing::list_secrets()?;
+    Ok(list
+        .into_iter()
+        .filter(|map| map.get("service").map_or(false, |s| s == SERVICE_NAME))
+        .filter_map(|map| map.get("id").cloned()))
 }
 
 impl Display for Scheme {
