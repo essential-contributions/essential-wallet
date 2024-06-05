@@ -12,7 +12,7 @@ let
 in
 rustPlatform.buildRustPackage {
   inherit src;
-  pname = "essential-rest-server";
+  pname = "essential-wallet";
   version = (builtins.fromTOML (builtins.readFile crateTOML)).package.version;
 
   # We run tests separately in CI.
