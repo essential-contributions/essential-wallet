@@ -49,13 +49,22 @@ pub enum Padding {
     End,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 /// Different types of private keys that can be used for signing.
 pub enum Key {
     /// A secp256k1 key.
     Secp256k1(secp256k1::SecretKey),
     /// An ed25519 key.
     Ed25519(ed25519_dalek::SecretKey),
+}
+
+#[derive(Clone, Copy, Debug)]
+/// Different types of public keys.
+pub enum PublicKey {
+    /// A secp256k1 key.
+    Secp256k1(secp256k1::PublicKey),
+    /// An ed25519 key.
+    Ed25519(ed25519_dalek::VerifyingKey),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -323,4 +332,18 @@ pub fn postcard_bytes_with_padding<T: Serialize>(
 /// Serialize data using postcard.
 pub fn postcard_bytes<T: Serialize>(data: &T) -> anyhow::Result<Vec<u8>> {
     Ok(postcard::to_allocvec(data)?)
+}
+
+/// Get the public key from a private key.
+pub fn public_key(private_key: &Key) -> PublicKey {
+    match private_key {
+        Key::Secp256k1(key) => {
+            let secp = secp256k1::Secp256k1::new();
+            PublicKey::Secp256k1(key.public_key(&secp))
+        }
+        Key::Ed25519(key) => {
+            let key = ed25519_dalek::SigningKey::from_bytes(key);
+            PublicKey::Ed25519(key.verifying_key())
+        }
+    }
 }

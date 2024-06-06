@@ -17,6 +17,7 @@ use std::{fmt::Display, str::FromStr};
 use clap::ValueEnum;
 use cryptex::{get_os_keyring, KeyRing, ListKeyRing};
 use essential_signer::Key;
+use essential_signer::PublicKey;
 use essential_types::intent::Intent;
 use essential_types::Word;
 use rand::SeedableRng;
@@ -75,6 +76,12 @@ pub fn delete_key_pair(name: String) -> anyhow::Result<()> {
 /// List all names for key pairs stored in the OS keyring for this service.
 pub fn list_names() -> anyhow::Result<Vec<String>> {
     Ok(list()?.collect())
+}
+
+/// Get the public key for this key pair.
+pub fn get_public_key(name: &str) -> anyhow::Result<PublicKey> {
+    let key = name_to_key(name)?;
+    Ok(essential_signer::public_key(&key))
 }
 
 /// Sign an intent set.
