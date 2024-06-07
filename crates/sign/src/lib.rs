@@ -14,7 +14,7 @@
 use anyhow::ensure;
 use clap::ValueEnum;
 use essential_types::{
-    convert::{bytes_from_word, word_from_bytes},
+    convert::{bytes_from_word, word_4_from_u8_32, word_from_bytes},
     Hash, Word,
 };
 use serde::{Deserialize, Serialize};
@@ -200,6 +200,18 @@ pub fn encode_str(data: Vec<u8>, encoding: Encoding) -> anyhow::Result<String> {
     }
 }
 
+/// Align and convert the data to words.
+pub fn into_words(data: Vec<u8>, padding: Padding) -> Vec<Word> {
+    let data = align_to_word(data, padding);
+    data.chunks(8)
+        .map(|chunk| {
+            essential_types::convert::word_from_bytes(
+                chunk.try_into().expect("This can't fail because of chunks"),
+            )
+        })
+        .collect::<Vec<Word>>()
+}
+
 /// Align the data to be word aligned.
 /// This will pad the data with zeros at the start or end depending on the padding.
 pub fn align_to_word(data: Vec<u8>, padding: Padding) -> Vec<u8> {
@@ -318,6 +330,24 @@ pub fn signature_to_words(sig: &Signature) -> Vec<Word> {
             )
         })
         .collect()
+}
+
+/// Turn any supported public key into bytes that are padded to be word aligned.
+///
+/// This is the same layout that the `essential-constraint-vm` expects.
+pub fn public_key_to_words(key: &PublicKey) -> Vec<Word> {
+    match key {
+        PublicKey::Secp256k1(key) => {
+            let [public_key @ .., end] = key.serialize();
+            let mut public_key_words = word_4_from_u8_32(public_key).to_vec();
+            let mut end_word = [0u8; 8];
+            end_word[7] = end;
+            let end_word = word_from_bytes(end_word);
+            public_key_words.push(end_word);
+            public_key_words
+        }
+        PublicKey::Ed25519(key) => word_4_from_u8_32(key.to_bytes()).to_vec(),
+    }
 }
 
 /// Serialize data using postcard and then pad it to be word aligned.

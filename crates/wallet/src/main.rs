@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::ensure;
 use clap::{Parser, Subcommand};
 use essential_signer::{decode_str, read_file, Encoding, Padding, Signature};
-use essential_wallet::{list_names, new_key_pair, Scheme};
+use essential_wallet::{Scheme, Wallet};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -11,6 +11,10 @@ struct Cli {
     /// Select a subcommand to run
     #[command(subcommand)]
     command: Command,
+    /// Set the path to the wallet directory.
+    /// If not set then a sensible default will be used (like ~/.essential-wallet).
+    #[arg(short, long)]
+    path: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -92,9 +96,17 @@ fn main() {
 
 fn run(args: Cli) -> anyhow::Result<()> {
     eprintln!("{}", WARNING);
+
+    let pass = rpassword::prompt_password("Enter password to unlock wallet: ")?;
+
+    // TODO: Not sure what to do for salt as it would need to be stored anyway
+    let mut wallet = args
+        .path
+        .map(|p| Wallet::new(&pass, p))
+        .unwrap_or_else(|| Wallet::with_default_path(&pass))?;
     match args.command {
         Command::Generate { name, scheme } => {
-            new_key_pair(name, scheme)?;
+            wallet.new_key_pair(&name, scheme)?;
         }
         Command::Delete { name } => {
             println!(
@@ -104,10 +116,10 @@ fn run(args: Cli) -> anyhow::Result<()> {
             let mut input = String::new();
             std::io::stdin().read_line(&mut input)?;
             ensure!(input.trim() == "yes", "Aborted");
-            essential_wallet::delete_key_pair(name)?;
+            wallet.delete_key_pair(&name)?;
         }
         Command::List => {
-            let names = list_names()?;
+            let names = wallet.list_names()?;
             println!("Stored Accounts:");
             for name in names {
                 println!("{}", name);
@@ -127,17 +139,13 @@ fn run(args: Cli) -> anyhow::Result<()> {
             };
             let sig = if require_aligned {
                 match auto_pad {
-                    Some(padding) => {
-                        essential_wallet::sign_bytes_with_padding(data, padding, &name)?
-                    }
-                    None => essential_wallet::sign_aligned_bytes(&data, &name)?,
+                    Some(padding) => wallet.sign_bytes_with_padding(data, padding, &name)?,
+                    None => wallet.sign_aligned_bytes(&data, &name)?,
                 }
             } else {
                 match auto_pad {
-                    Some(padding) => {
-                        essential_wallet::sign_bytes_with_padding(data, padding, &name)?
-                    }
-                    None => essential_wallet::sign_bytes_unchecked(&data, &name)?,
+                    Some(padding) => wallet.sign_bytes_with_padding(data, padding, &name)?,
+                    None => wallet.sign_bytes_unchecked(&data, &name)?,
                 }
             };
             output_signature(&sig, pad_signature, output)?;
@@ -146,7 +154,7 @@ fn run(args: Cli) -> anyhow::Result<()> {
             let data = read_file(&path)?;
             let intent_set: Vec<essential_types::intent::Intent> = serde_json::from_slice(&data)?;
 
-            let sig = essential_wallet::sign_intent_set(intent_set, &name)?;
+            let sig = wallet.sign_intent_set(intent_set, &name)?;
             let sig = essential_signer::signed_set_to_bytes(&sig)?;
             let sig = essential_signer::encode_str(sig, output)?;
             println!("{}", sig);
