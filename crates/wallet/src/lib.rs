@@ -96,7 +96,7 @@ impl Wallet {
     pub fn temp() -> anyhow::Result<Self> {
         let dir = tempfile::tempdir()?;
         let path = db_dir(Some(dir.path().to_path_buf()))?;
-        let mut s = Self::new("", path)?;
+        let mut s = Self::new("password", path)?;
         s.dir = Some(dir);
         Ok(s)
     }
