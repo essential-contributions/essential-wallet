@@ -11,9 +11,9 @@ clap = { version = "4.5.4", features = ["derive"] }
 cryptex = { version = "1.8.1", features = ["file"] }
 dirs = "5.0"
 ed25519-dalek = "2.1.0"
-essential-hash = { git = "ssh://git@github.com/essential-contributions/essential-base.git", branch = "freesig/encoding" }
-essential-sign = { git = "ssh://git@github.com/essential-contributions/essential-base.git", branch = "freesig/encoding" }
-essential-types = { git = "ssh://git@github.com/essential-contributions/essential-base.git", branch = "freesig/encoding" }
+essential-hash = { git = "ssh://git@github.com/essential-contributions/essential-base.git" }
+essential-sign = { git = "ssh://git@github.com/essential-contributions/essential-base.git" }
+essential-types = { git = "ssh://git@github.com/essential-contributions/essential-base.git" }
 hex = "0.4.3"
 postcard = { version = "1.0.8", default-featues = false, features = ["alloc"] }
 rand = "0.8.5"
