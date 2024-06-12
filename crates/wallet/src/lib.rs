@@ -21,7 +21,7 @@ use cryptex::KeyRing;
 use essential_signer::Key;
 use essential_signer::PublicKey;
 use essential_types::intent::Intent;
-use essential_types::Word;
+use essential_types::{Hash, Word};
 use rand::SeedableRng;
 use rusqlite::OptionalExtension;
 use serde::Serialize;
@@ -198,6 +198,12 @@ impl Wallet {
     ) -> anyhow::Result<Signature> {
         let key = self.name_to_key(name)?;
         essential_signer::sign_postcard_with_padding(data, padding, &key)
+    }
+
+    /// Create a signature using the key pair stored at this name.
+    pub fn sign_hash(&mut self, data: Hash, name: &str) -> anyhow::Result<Signature> {
+        let key = self.name_to_key(name)?;
+        essential_signer::sign_hash(data, &key)
     }
 
     /// Create a signature using the key pair stored at this name.

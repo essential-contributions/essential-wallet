@@ -13,10 +13,7 @@
 
 use anyhow::ensure;
 use clap::ValueEnum;
-use essential_types::{
-    convert::{bytes_from_word, word_4_from_u8_32, word_from_bytes},
-    Hash, Word,
-};
+use essential_types::{convert::word_4_from_u8_32, Hash, Word};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
@@ -100,7 +97,7 @@ pub fn sign_postcard_with_padding<T: Serialize>(
 
 /// Sign a slice of words by hashing and signing the hash.
 pub fn sign_words(data: &[Word], private_key: &Key) -> anyhow::Result<Signature> {
-    let hash = hash_words(data)?;
+    let hash = hash_words(data);
     sign_hash(hash, private_key)
 }
 
@@ -258,9 +255,8 @@ pub fn hash_bytes(data: &[u8]) -> anyhow::Result<Hash> {
 }
 
 /// Hash the words using sha256.
-pub fn hash_words(data: &[Word]) -> anyhow::Result<Hash> {
-    let data: Vec<u8> = data.iter().copied().flat_map(bytes_from_word).collect();
-    hash_bytes(&data)
+pub fn hash_words(data: &[Word]) -> Hash {
+    essential_hash::hash_words(data)
 }
 
 /// Turn a secp256k1 signature into an essential signature.
@@ -279,14 +275,7 @@ pub fn to_essential_signature(
 /// This is the same layout that the `essential-constraint-vm` expects.
 pub fn signature_to_aligned_bytes(sig: &Signature) -> Vec<u8> {
     match sig {
-        Signature::Secp256k1(sig) => {
-            let (rec_id, data) = sig.serialize_compact();
-            let mut bytes = data.to_vec();
-            let rec_id = rec_id.to_i32();
-            let rec_id = Word::from(rec_id);
-            bytes.extend(bytes_from_word(rec_id));
-            bytes
-        }
+        Signature::Secp256k1(sig) => essential_sign::encode::signature_as_bytes(sig).to_vec(),
         Signature::Ed25519(sig) => sig.to_bytes().to_vec(),
     }
 }
@@ -319,17 +308,10 @@ pub fn signed_set_to_bytes(
 
 /// Turn any supported signature into words.
 pub fn signature_to_words(sig: &Signature) -> Vec<Word> {
-    let bytes = signature_to_aligned_bytes(sig);
-    bytes
-        .chunks_exact(8)
-        .map(|chunk| {
-            word_from_bytes(
-                chunk
-                    .try_into()
-                    .expect("Can't fail because of chunks_exact"),
-            )
-        })
-        .collect()
+    match sig {
+        Signature::Secp256k1(sig) => essential_sign::encode::signature(sig).to_vec(),
+        Signature::Ed25519(_) => todo!(),
+    }
 }
 
 /// Turn any supported public key into bytes that are padded to be word aligned.
@@ -337,15 +319,7 @@ pub fn signature_to_words(sig: &Signature) -> Vec<Word> {
 /// This is the same layout that the `essential-constraint-vm` expects.
 pub fn public_key_to_words(key: &PublicKey) -> Vec<Word> {
     match key {
-        PublicKey::Secp256k1(key) => {
-            let [public_key @ .., end] = key.serialize();
-            let mut public_key_words = word_4_from_u8_32(public_key).to_vec();
-            let mut end_word = [0u8; 8];
-            end_word[7] = end;
-            let end_word = word_from_bytes(end_word);
-            public_key_words.push(end_word);
-            public_key_words
-        }
+        PublicKey::Secp256k1(key) => essential_sign::encode::public_key(key).to_vec(),
         PublicKey::Ed25519(key) => word_4_from_u8_32(key.to_bytes()).to_vec(),
     }
 }
