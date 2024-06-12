@@ -648,7 +648,7 @@ dependencies = [
 [[package]]
 name = "essential-hash"
 version = "0.1.0"
-source = "git+ssh://git@github.com/essential-contributions/essential-base.git#57bf5dd89e38c40ba218471e803081dcbb4305b9"
+source = "git+ssh://git@github.com/essential-contributions/essential-base.git?branch=freesig/encoding#5841db6b4c902944eca59875456b939af3e7a745"
 dependencies = [
  "essential-types",
  "postcard",
@@ -659,7 +659,7 @@ dependencies = [
 [[package]]
 name = "essential-sign"
 version = "0.1.0"
-source = "git+ssh://git@github.com/essential-contributions/essential-base.git#57bf5dd89e38c40ba218471e803081dcbb4305b9"
+source = "git+ssh://git@github.com/essential-contributions/essential-base.git?branch=freesig/encoding#5841db6b4c902944eca59875456b939af3e7a745"
 dependencies = [
  "essential-hash",
  "essential-types",
@@ -691,7 +691,7 @@ dependencies = [
 [[package]]
 name = "essential-types"
 version = "0.1.0"
-source = "git+ssh://git@github.com/essential-contributions/essential-base.git#57bf5dd89e38c40ba218471e803081dcbb4305b9"
+source = "git+ssh://git@github.com/essential-contributions/essential-base.git?branch=freesig/encoding#5841db6b4c902944eca59875456b939af3e7a745"
 dependencies = [
  "base64",
  "hex",
