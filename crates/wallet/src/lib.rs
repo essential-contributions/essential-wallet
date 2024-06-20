@@ -41,6 +41,7 @@ pub enum Scheme {
     /// The ed25519 signature scheme.
     Ed25519,
 }
+
 /// Essential Wallet
 /// **USE AT YOUR OWN RISK!**
 /// Stores secret keys in sqlcipher database.
@@ -99,6 +100,43 @@ impl Wallet {
         let mut s = Self::new("password", path)?;
         s.dir = Some(dir);
         Ok(s)
+    }
+
+    #[cfg(feature = "test-utils")]
+    /// Insert an existing key into the wallet.
+    /// Warning this is for testing only.
+    pub fn insert_key(&mut self, name: &str, key: Key) -> anyhow::Result<()> {
+        let scheme = match key {
+            Key::Secp256k1(_) => Scheme::Secp256k1,
+            Key::Ed25519(_) => Scheme::Ed25519,
+        };
+        self.insert_name(name, scheme)?;
+        match key {
+            Key::Secp256k1(private_key) => {
+                match self.store.set_secret(name, private_key.as_ref().as_slice()) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        self.delete_name(name)?;
+                        Err(e.into())
+                    }
+                }
+            }
+            Key::Ed25519(_) => todo!("Not supported yet"),
+        }
+    }
+
+    #[cfg(feature = "test-utils")]
+    /// Generate a private key.
+    /// Warning this is for testing only.
+    pub fn generate_private_key(&mut self, scheme: Scheme) -> anyhow::Result<Key> {
+        match scheme {
+            Scheme::Secp256k1 => {
+                let mut rng = rand::rngs::StdRng::from_entropy();
+                let (private_key, _) = secp256k1::generate_keypair(&mut rng);
+                Ok(Key::Secp256k1(private_key))
+            }
+            Scheme::Ed25519 => todo!("Not supported yet"),
+        }
     }
 
     /// Create a new key pair.
