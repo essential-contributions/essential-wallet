@@ -297,11 +297,11 @@ pub fn signature_to_bytes(sig: &Signature) -> anyhow::Result<Vec<u8>> {
     }
 }
 
-/// Serialize a signed set of intents to json bytes.
+/// Serialize a signed contract to json bytes.
 ///
 /// This can be directly submitted to the api.
 pub fn signed_set_to_bytes(
-    signed_set: &essential_types::intent::SignedSet,
+    signed_set: &essential_types::contract::SignedContract,
 ) -> anyhow::Result<Vec<u8>> {
     Ok(serde_json::to_vec(signed_set)?)
 }

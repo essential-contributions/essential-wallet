@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::ensure;
 use clap::{Parser, Subcommand};
 use essential_signer::{decode_str, read_file, Encoding, Padding, Signature};
+use essential_types::contract::Contract;
 use essential_wallet::{Scheme, Wallet};
 
 #[derive(Parser)]
@@ -50,10 +51,10 @@ enum Command {
         #[arg(long, default_value_t = true)]
         pad_signature: bool,
     },
-    SignIntentSet {
+    SignContract {
         /// The name of the key pair to use for signing.
         name: String,
-        /// Path to the compiled intent set.
+        /// Path to the compiled contract.
         path: PathBuf,
         /// Encoding of the output signature
         #[arg(short, long, default_value_t = Encoding::Hex, value_enum)]
@@ -150,11 +151,11 @@ fn run(args: Cli) -> anyhow::Result<()> {
             };
             output_signature(&sig, pad_signature, output)?;
         }
-        Command::SignIntentSet { name, path, output } => {
+        Command::SignContract { name, path, output } => {
             let data = read_file(&path)?;
-            let intent_set: Vec<essential_types::intent::Intent> = serde_json::from_slice(&data)?;
+            let contract: Contract = serde_json::from_slice(&data)?;
 
-            let sig = wallet.sign_intent_set(intent_set, &name)?;
+            let sig = wallet.sign_contract(contract, &name)?;
             let sig = essential_signer::signed_set_to_bytes(&sig)?;
             let sig = essential_signer::encode_str(sig, output)?;
             println!("{}", sig);

@@ -20,7 +20,7 @@ use clap::ValueEnum;
 use cryptex::KeyRing;
 use essential_signer::Key;
 use essential_signer::PublicKey;
-use essential_types::intent::Intent;
+use essential_types::contract::Contract;
 use essential_types::{Hash, Word};
 use rand::SeedableRng;
 use rusqlite::OptionalExtension;
@@ -192,21 +192,21 @@ impl Wallet {
         Ok(essential_signer::public_key(&key))
     }
 
-    /// Sign an intent set.
+    /// Sign an contract.
     ///
     /// Requires the keypair be a secp256k1 key or this will return an error.
     /// No padding is applied to the data before signing.
-    /// This is designed to be used for deploying intent sets to the api.
-    pub fn sign_intent_set(
+    /// This is designed to be used for deploying contracts to the api.
+    pub fn sign_contract(
         &mut self,
-        data: Vec<Intent>,
+        data: Contract,
         name: &str,
-    ) -> anyhow::Result<essential_types::intent::SignedSet> {
+    ) -> anyhow::Result<essential_types::contract::SignedContract> {
         let key = self.name_to_key(name)?;
         match key {
-            Key::Secp256k1(key) => Ok(essential_sign::intent_set::sign(data, &key)),
+            Key::Secp256k1(key) => Ok(essential_sign::contract::sign(data, &key)),
             Key::Ed25519(_) => Err(anyhow::anyhow!(
-                "Ed25519 not supported for signing intent sets. Please use a Secp256k1 key"
+                "Ed25519 not supported for signing contracts. Please use a Secp256k1 key"
             ))?,
         }
     }

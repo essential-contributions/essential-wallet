@@ -21,7 +21,7 @@ Commands:
   delete           
   list             
   sign             
-  sign-intent-set  
+  sign-contract  
   help             Print this message or the help of the given subcommand(s)
 
 Options:
