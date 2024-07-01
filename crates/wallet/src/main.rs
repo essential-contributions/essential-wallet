@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::ensure;
 use clap::{Parser, Subcommand};
 use essential_signer::{decode_str, read_file, Encoding, Padding, Signature};
-use essential_types::contract::Contract;
+use essential_types::{contract::Contract, convert::bytes_from_word};
 use essential_wallet::{Scheme, Wallet};
 
 #[derive(Parser)]
@@ -59,6 +59,13 @@ enum Command {
         /// Encoding of the output signature
         #[arg(short, long, default_value_t = Encoding::Hex, value_enum)]
         output: Encoding,
+    },
+    PrintPubKey {
+        /// Hash the public key before printing.
+        #[arg(short, long)]
+        hashed: bool,
+        /// The name of the key to print.
+        name: String,
     },
 }
 
@@ -159,6 +166,32 @@ fn run(args: Cli) -> anyhow::Result<()> {
             let sig = essential_signer::signed_set_to_bytes(&sig)?;
             let sig = essential_signer::encode_str(sig, output)?;
             println!("{}", sig);
+        }
+        Command::PrintPubKey { name, hashed } => {
+            let pub_key = wallet.get_public_key(&name)?;
+            if hashed {
+                println!(
+                    "{}",
+                    essential_signer::encode_str(
+                        essential_signer::hash_words(&essential_signer::public_key_to_words(
+                            &pub_key
+                        ))
+                        .to_vec(),
+                        Encoding::HexUpper
+                    )?
+                );
+            } else {
+                println!(
+                    "{}",
+                    essential_signer::encode_str(
+                        essential_signer::public_key_to_words(&pub_key)
+                            .into_iter()
+                            .flat_map(bytes_from_word)
+                            .collect(),
+                        Encoding::HexUpper
+                    )?
+                );
+            }
         }
     }
     Ok(())

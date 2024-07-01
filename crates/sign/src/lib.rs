@@ -29,6 +29,8 @@ pub enum Encoding {
     Bytes,
     /// Hexadecimal encoding.
     Hex,
+    /// Uppercase hexadecimal encoding.
+    HexUpper,
     /// Standard base64 encoding.
     Base64,
     /// Base64 encoding with URL safe characters and no padding.
@@ -165,7 +167,7 @@ pub fn decode_str(data: String, encoding: Encoding) -> anyhow::Result<Vec<u8>> {
             let Bytes(data) = serde_json::from_str(&data)?;
             Ok(data)
         }
-        Encoding::Hex => Ok(hex::decode(data)?),
+        Encoding::Hex | Encoding::HexUpper => Ok(hex::decode(data)?),
         Encoding::Base64 => {
             use base64::engine::general_purpose::STANDARD;
             use base64::Engine;
@@ -184,6 +186,7 @@ pub fn encode_str(data: Vec<u8>, encoding: Encoding) -> anyhow::Result<String> {
     match encoding {
         Encoding::Bytes => Ok(serde_json::to_string(&Bytes(data))?),
         Encoding::Hex => Ok(hex::encode(data)),
+        Encoding::HexUpper => Ok(hex::encode_upper(data)),
         Encoding::Base64 => {
             use base64::engine::general_purpose::STANDARD;
             use base64::Engine;
