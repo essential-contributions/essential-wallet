@@ -4,6 +4,13 @@ members = [
 ]
 resolver = "2"
 
+[workspace.package]
+edition = "2021"
+authors = ["Essential Contributions <contact@essentialcontributions.com>"]
+homepage = "https://essential.builders/"
+license = "Apache-2.0"
+repository = "https://github.com/essential-contributions/essential-wallet"
+
 [workspace.dependencies]
 anyhow = "1.0.80"
 base64 = "0.22.1"
@@ -11,9 +18,9 @@ clap = { version = "4.5.4", features = ["derive"] }
 cryptex = { version = "1.8.1", features = ["file"] }
 dirs = "5.0"
 ed25519-dalek = "2.1.0"
-essential-hash = { git = "ssh://git@github.com/essential-contributions/essential-base.git" }
-essential-sign = { git = "ssh://git@github.com/essential-contributions/essential-base.git" }
-essential-types = { git = "ssh://git@github.com/essential-contributions/essential-base.git" }
+essential-hash = "0.1.0"
+essential-sign = "0.1.0"
+essential-types = "0.1.0"
 hex = "0.4.3"
 postcard = { version = "1.0.8", default-featues = false, features = ["alloc"] }
 rand = "0.8.5"

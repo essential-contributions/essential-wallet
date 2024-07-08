@@ -1,9 +1,12 @@
 [package]
-edition = "2021"
 name = "essential-signer"
 version = "0.1.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Helpers for signing and encoding when using the Eseential protocol."
+edition.workspace = true
+authors.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
