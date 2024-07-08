@@ -2,7 +2,6 @@
 [![Crates.io][crates-badge]][crates-url]
 [![Documentation][docs-badge]][docs-url]
 [![license][apache-badge]][apache-url]
-[![Build Status][actions-badge]][actions-url]
 
 [crates-badge]: https://img.shields.io/crates/v/essential-wallet.svg
 [crates-url]: https://crates.io/crates/essential-wallet
