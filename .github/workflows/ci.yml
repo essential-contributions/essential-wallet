@@ -53,16 +53,12 @@ jobs:
     - uses: DeterminateSystems/magic-nix-cache-action@v4
     - run: nix shell nixpkgs#cargo-toml-lint nixpkgs#findutils --command git ls-files | grep Cargo.toml$ | xargs --verbose -n 1 $(which cargo-toml-lint)
 
-  # Test the apps.
   tests:
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Add each app's test command here, each with a unique port.
-          - command: |
-              nix develop .#essential-rust-app-dev --command cargo check --locked --all && cargo clippy --locked --all -- -D warnings && cargo fmt --all -- --check
-              nix develop .#essential-rust-app-dev --command cargo test
+          - command: nix develop --command cargo check --locked --all && cargo clippy --locked --all -- -D warnings && cargo fmt --all -- --check && cargo test
     runs-on: ubuntu-latest
     permissions:
       id-token: "write"
