@@ -1,0 +1,95 @@
+
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Check the nix code is formatted.
+  nix-fmt-check:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: "write"
+      contents: "read"
+    steps:
+    - uses: actions/checkout@v3
+    - uses: DeterminateSystems/nix-installer-action@v10
+    - uses: DeterminateSystems/magic-nix-cache-action@v4
+    - run: nix fmt -- --check ./
+
+  # Check the devShell works on macOS and Linux.
+  nix:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        command: [
+            "shell --print-build-logs --no-update-lock-file",
+          ]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      id-token: "write"
+      contents: "read"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: DeterminateSystems/nix-installer-action@v10
+      - uses: DeterminateSystems/magic-nix-cache-action@v4
+      - run: nix ${{ matrix.command }}
+
+  # TODO: Update/fork this tool to provide a simpler, cargo-plugin-style CLI
+  # so that it can be merged in the command table above
+  cargo-toml-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: DeterminateSystems/nix-installer-action@v10
+    - uses: DeterminateSystems/magic-nix-cache-action@v4
+    - run: nix shell nixpkgs#cargo-toml-lint nixpkgs#findutils --command git ls-files | grep Cargo.toml$ | xargs --verbose -n 1 $(which cargo-toml-lint)
+
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - command: nix develop --command cargo check --locked --all && cargo clippy --locked --all -- -D warnings && cargo fmt --all -- --check && cargo test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: "write"
+      contents: "read"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: DeterminateSystems/nix-installer-action@v10
+      - uses: DeterminateSystems/magic-nix-cache-action@v4
+      - run: ${{ matrix.command }}
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: 
+      [
+        nix,
+        nix-fmt-check,
+        tests,
+        cargo-toml-lint,
+      ]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: katyo/publish-crates@v2
+        id: publish-crates
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          dry-run: ${{ github.event_name != 'push' }}
+          ignore-unpublished-changes: true
+      - name: List published crates
+        if: ${{ steps.publish-crates.outputs.published != '' }}
+        run: |
+          LIST="${{ join(fromJSON(steps.publish-crates.outputs.published).*.name, ', ') }}"
+          echo "Published crates: $LIST"

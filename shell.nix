@@ -5,6 +5,8 @@
 , mkShell
 , rust-analyzer
 , rustfmt
+, cargo
+, rustc
 }:
 mkShell {
   inputsFrom = [
@@ -15,5 +17,7 @@ mkShell {
     clippy
     rust-analyzer
     rustfmt
+    cargo
+    rustc
   ];
 }
