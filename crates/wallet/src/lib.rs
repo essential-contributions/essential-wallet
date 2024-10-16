@@ -15,21 +15,20 @@
 use std::path::PathBuf;
 use std::{fmt::Display, str::FromStr};
 
-use anyhow::bail;
 use clap::ValueEnum;
-use cryptex::KeyRing;
 use essential_signer::Key;
 use essential_signer::PublicKey;
 use essential_types::contract::Contract;
 use essential_types::{Hash, Word};
 use rand::SeedableRng;
-use rusqlite::OptionalExtension;
 use serde::Serialize;
 
 pub use essential_signer::ed25519_dalek;
 pub use essential_signer::secp256k1;
 pub use essential_signer::Padding;
 pub use essential_signer::Signature;
+
+mod store;
 
 const NAME: &str = "essential-wallet";
 
@@ -46,8 +45,7 @@ pub enum Scheme {
 /// **USE AT YOUR OWN RISK!**
 /// Stores secret keys in sqlcipher database.
 pub struct Wallet {
-    store: cryptex::sqlcipher::SqlCipherKeyring,
-    names: rusqlite::Connection,
+    store: store::Store,
     #[cfg(feature = "test-utils")]
     dir: Option<tempfile::TempDir>,
 }
@@ -56,31 +54,13 @@ impl Wallet {
     /// Create a new wallet with a password and directory.
     pub fn new(password: &str, path: PathBuf) -> anyhow::Result<Self> {
         let mut path = db_dir(Some(path.clone()))?;
-        let mut params = cryptex::sqlcipher::ConnectionParams::default();
+        path.push("accounts.sqlite3");
+        let store = store::Store::new(password, &path)?;
 
-        // TODO: Probably insecure to not hash the password with salt
-        params.key(password.as_bytes());
-        let store = cryptex::sqlcipher::SqlCipherKeyring::with_params(&params, Some(path.clone()))
-            // Fix unhelpful error message
-            .map_err(|e| {
-                if let cryptex::error::KeyRingError::GeneralError { msg } = &e {
-                    if msg.contains("file is not a database") {
-                        return anyhow::anyhow!("Incorrect password.",);
-                    }
-                }
-                e.into()
-            })?;
-        path.push("names.db3");
-        let names = rusqlite::Connection::open(path)?;
-        create_table(&names)?;
         #[cfg(not(feature = "test-utils"))]
-        let r = Ok(Self { store, names });
+        let r = Ok(Self { store });
         #[cfg(feature = "test-utils")]
-        let r = Ok(Self {
-            store,
-            names,
-            dir: None,
-        });
+        let r = Ok(Self { store, dir: None });
         r
     }
 
@@ -106,20 +86,10 @@ impl Wallet {
     /// Insert an existing key into the wallet.
     /// Warning this is for testing only.
     pub fn insert_key(&mut self, name: &str, key: Key) -> anyhow::Result<()> {
-        let scheme = match key {
-            Key::Secp256k1(_) => Scheme::Secp256k1,
-            Key::Ed25519(_) => Scheme::Ed25519,
-        };
-        self.insert_name(name, scheme)?;
         match key {
             Key::Secp256k1(private_key) => {
-                match self.store.set_secret(name, private_key.as_ref().as_slice()) {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        self.delete_name(name)?;
-                        Err(e.into())
-                    }
-                }
+                self.store
+                    .set_secret(name, Scheme::Secp256k1, private_key.as_ref().as_slice())
             }
             Key::Ed25519(_) => todo!("Not supported yet"),
         }
@@ -144,18 +114,12 @@ impl Wallet {
     /// The key will be stored at the name provided.
     /// The scheme determines which signature scheme to use.
     pub fn new_key_pair(&mut self, name: &str, scheme: Scheme) -> anyhow::Result<()> {
-        self.insert_name(name, scheme)?;
         match scheme {
             Scheme::Secp256k1 => {
                 let mut rng = rand::rngs::StdRng::from_entropy();
                 let (private_key, _) = secp256k1::generate_keypair(&mut rng);
-                match self.store.set_secret(name, private_key.as_ref().as_slice()) {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        self.delete_name(name)?;
-                        Err(e.into())
-                    }
-                }
+                self.store
+                    .set_secret(name, scheme, private_key.as_ref().as_slice())
             }
             Scheme::Ed25519 => todo!("Not supported yet"),
         }
@@ -163,22 +127,7 @@ impl Wallet {
 
     /// Delete a key pair at this name.
     pub fn delete_key_pair(&mut self, name: &str) -> anyhow::Result<()> {
-        let Some(scheme) = self.scheme(name)? else {
-            bail!("Name not found: {}", name)
-        };
-        self.delete_name(name)?;
-        match self
-            .store
-            .delete_secret(name)
-            .map_err(|_| anyhow::anyhow!("The name '{}' does not exist", name))
-        {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                self.insert_name(name, scheme)?;
-
-                Err(e)
-            }
-        }
+        self.store.delete_secret(name)
     }
 
     /// List all names for key pairs stored in the OS self.store for this service.
@@ -281,25 +230,8 @@ impl Wallet {
         essential_signer::sign_bytes_unchecked(data, &key)
     }
 
-    fn insert_name(&mut self, name: &str, scheme: Scheme) -> anyhow::Result<()> {
-        self.names.execute(
-            "INSERT OR REPLACE INTO names (name, scheme) VALUES (?, ?)",
-            [name, &scheme.to_string()],
-        )?;
-        Ok(())
-    }
-
-    fn delete_name(&mut self, name: &str) -> anyhow::Result<()> {
-        self.names
-            .execute("DELETE FROM names WHERE name = ?", [name])?;
-        Ok(())
-    }
-
     fn name_to_key(&mut self, name: &str) -> anyhow::Result<Key> {
-        let Some(scheme) = self.scheme(name)? else {
-            bail!("Name not found: {}. Maybe you need to create it?", name)
-        };
-        let private_key = self.store.get_secret(name)?;
+        let (private_key, scheme) = self.store.get_secret(name)?;
         match scheme {
             Scheme::Secp256k1 => {
                 let private_key = secp256k1::SecretKey::from_slice(private_key.as_slice())?;
@@ -309,36 +241,9 @@ impl Wallet {
         }
     }
 
-    /// Get the scheme from a name.
-    fn scheme(&mut self, name: &str) -> anyhow::Result<Option<Scheme>> {
-        self.names
-            .query_row(
-                "SELECT scheme FROM names WHERE name = ? LIMIT 1",
-                [name],
-                |row| {
-                    let scheme = row.get::<_, String>(0)?;
-                    Ok(scheme)
-                },
-            )
-            .optional()?
-            .map(|scheme| {
-                let scheme = <Scheme as FromStr>::from_str(&scheme)?;
-                Ok(scheme)
-            })
-            .transpose()
-    }
-
     /// List all accounts under this service.
     fn list(&mut self) -> anyhow::Result<Vec<(String, Scheme)>> {
-        self.names
-            .prepare_cached("SELECT name, scheme FROM names")?
-            .query_and_then([], |row| {
-                let name = row.get::<_, String>(0)?;
-                let scheme = row.get::<_, String>(1)?;
-                let scheme = <Scheme as FromStr>::from_str(&scheme)?;
-                Ok((name, scheme))
-            })?
-            .collect::<anyhow::Result<Vec<_>>>()
+        self.store.list()
     }
 }
 
@@ -361,18 +266,6 @@ impl FromStr for Scheme {
             _ => Err(anyhow::anyhow!("Unknown scheme: {}", s)),
         }
     }
-}
-
-fn create_table(names: &rusqlite::Connection) -> anyhow::Result<()> {
-    names.execute(
-        "CREATE TABLE IF NOT EXISTS names (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE,
-            scheme TEXT NOT NULL
-        )",
-        [],
-    )?;
-    Ok(())
 }
 
 fn db_dir(in_path: Option<PathBuf>) -> anyhow::Result<PathBuf> {

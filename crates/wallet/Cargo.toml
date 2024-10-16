@@ -1,6 +1,6 @@
 [package]
 name = "essential-wallet"
-version = "0.2.0"
+version = "0.3.0"
 description = "A wallet for storing pub/priv keypairs for testing purposes."
 edition.workspace = true
 authors.workspace = true
@@ -12,11 +12,12 @@ repository.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
-cryptex = { workspace = true }
+# cryptex = { workspace = true }
 dirs = { workspace = true }
 essential-sign = { workspace = true }
 essential-signer = { workspace = true }
 essential-types = { workspace = true }
+hex = { workspace = true }
 rand = { workspace = true }
 rpassword = { workspace = true }
 rusqlite = { workspace = true }
