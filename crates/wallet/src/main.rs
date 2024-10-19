@@ -60,10 +60,16 @@ enum Command {
         #[arg(short, long, default_value_t = Encoding::Hex, value_enum)]
         output: Encoding,
     },
+    /// Print the public key.
     PrintPubKey {
         /// Hash the public key before printing.
         #[arg(short, long)]
         hashed: bool,
+        /// The name of the key to print.
+        name: String,
+    },
+    /// Print the private key. Warning: This is a security risk.
+    PrintPrivKey {
         /// The name of the key to print.
         name: String,
     },
@@ -192,6 +198,17 @@ fn run(args: Cli) -> anyhow::Result<()> {
                     )?
                 );
             }
+        }
+        Command::PrintPrivKey { name } => {
+            let priv_key = wallet.get_private_key(&name)?;
+            let bytes = match priv_key {
+                essential_signer::Key::Secp256k1(secret_key) => secret_key.secret_bytes().to_vec(),
+                essential_signer::Key::Ed25519(secret_key) => secret_key.to_vec(),
+            };
+            println!(
+                "{}",
+                essential_signer::encode_str(bytes, Encoding::HexUpper)?
+            );
         }
     }
     Ok(())

@@ -141,6 +141,11 @@ impl Wallet {
         Ok(essential_signer::public_key(&key))
     }
 
+    /// Get the private key for this key pair.
+    pub fn get_private_key(&mut self, name: &str) -> anyhow::Result<Key> {
+        self.name_to_key(name)
+    }
+
     /// Sign an contract.
     ///
     /// Requires the keypair be a secp256k1 key or this will return an error.
