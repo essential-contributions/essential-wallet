@@ -25,6 +25,7 @@
 
       packages = perSystemPkgs (pkgs: {
         essential-wallet = pkgs.essential-wallet;
+        essential-wallet-test = pkgs.essential-wallet-test;
         default = inputs.self.packages.${pkgs.system}.essential-wallet;
       });
 
@@ -37,6 +38,10 @@
         wallet = {
           type = "app";
           program = "${pkgs.essential-wallet}/bin/essential-wallet";
+        };
+        wallet-test = {
+          type = "app";
+          program = "${pkgs.essential-wallet-test}/bin/essential-wallet";
         };
         default = inputs.self.apps.${pkgs.system}.wallet;
       });

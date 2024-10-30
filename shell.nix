@@ -2,6 +2,7 @@
 { cargo-toml-lint
 , clippy
 , essential-wallet
+, essential-wallet-test
 , mkShell
 , rust-analyzer
 , rustfmt
@@ -11,6 +12,7 @@
 mkShell {
   inputsFrom = [
     essential-wallet
+    essential-wallet-test
   ];
   buildInputs = [
     cargo-toml-lint
