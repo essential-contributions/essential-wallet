@@ -41,7 +41,7 @@
         };
         wallet-test = {
           type = "app";
-          program = "${pkgs.essential-wallet-test}/bin/essential-wallet";
+          program = "${pkgs.essential-wallet-test}/bin/essential-wallet-test";
         };
         default = inputs.self.apps.${pkgs.system}.wallet;
       });
