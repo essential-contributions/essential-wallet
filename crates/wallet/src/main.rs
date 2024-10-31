@@ -2,10 +2,10 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::ensure;
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use essential_signer::{decode_str, read_file, Encoding, Padding, Signature};
 use essential_types::{contract::Contract, convert::bytes_from_word};
-use essential_wallet::{Scheme, Wallet, secp256k1::SecretKey};
+use essential_wallet::{secp256k1::SecretKey, Scheme, Wallet};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -18,19 +18,22 @@ struct Cli {
     #[arg(short, long)]
     path: Option<PathBuf>,
 
-    // #[cfg(feature = "test-utils")]
-    // /// Account name for test utilities
-    // #[arg(long)]
-    // account_name: Option<String>,
-
-    // #[cfg(feature = "test-utils")]
-    // /// Private key for test utilities
-    // #[arg(long)]
-    // private_key: Option<String>,
     #[cfg(feature = "test-utils")]
     /// Password input for test utilities
-    #[arg(long)]
+    #[arg(long, conflicts_with = "temp")]
     password: Option<String>,
+
+    #[cfg(feature = "test-utils")]
+    /// allow bypassing the password prompt for testing with a temp wallet
+    #[arg(long, conflicts_with = "password")]
+    temp: Option<TestWallet>,
+}
+
+// #[cfg(features = "test-utils")]
+#[derive(Args, Clone)]
+pub struct TestWallet {
+    name: String,
+    private_key: String,
 }
 
 #[derive(Subcommand)]
@@ -78,7 +81,7 @@ enum Command {
     /// Print the public key.
     PrintPubKey {
         /// Hash the public key before printing.
-        #[arg(short, long)]
+        #[arg(long)]
         hashed: bool,
         /// The name of the key to print.
         name: String,
@@ -87,15 +90,6 @@ enum Command {
     PrintPrivKey {
         /// The name of the key to print.
         name: String,
-    },
-    #[cfg(feature = "test-utils")]
-    /// Generate a tempory wallet for testing
-    Temp {
-        /// The name that the key pair will be stored under.
-        name: String,
-        #[arg(long)]
-        /// Private key for test wallet
-        private_key: Option<String>,
     },
 }
 
@@ -135,19 +129,37 @@ fn main() {
 fn run(args: Cli) -> anyhow::Result<()> {
     eprintln!("{}", WARNING);
 
+    let mut wallet: Wallet;
+    let pass: String;
+
     #[cfg(feature = "test-utils")]
-    let pass = args.password.clone().unwrap_or_else(|| {
-        rpassword::prompt_password("Enter password to unlock wallet: ").unwrap()
-    });
+    if let Some(password) = args.password {
+        pass = password;
+        wallet = args
+            .path
+            .map(|p| Wallet::new(&pass, p))
+            .unwrap_or_else(|| Wallet::with_default_path(&pass))?;
+    } else {
+        pass = rpassword::prompt_password("Enter password to unlock wallet: ").unwrap();
+        wallet = args
+            .path
+            .map(|p| Wallet::new(&pass, p))
+            .unwrap_or_else(|| Wallet::with_default_path(&pass))?;
+    }
+
+    #[cfg(feature = "test-utils")]
+    if let Some(temp_wallet) = args.temp {
+        wallet = Wallet::temp_cli(&temp_wallet.name, &temp_wallet.private_key).unwrap()
+    }
 
     #[cfg(not(feature = "test-utils"))]
-    let pass = rpassword::prompt_password("Enter password to unlock wallet: ")?;
-
     // TODO: Not sure what to do for salt as it would need to be stored anyway
-    let mut wallet = args
+    let pass = rpassword::prompt_password("Enter password to unlock wallet: ")?;
+    wallet = args
         .path
         .map(|p| Wallet::new(&pass, p))
         .unwrap_or_else(|| Wallet::with_default_path(&pass))?;
+
     match args.command {
         Command::Generate { name, scheme } => {
             wallet.new_key_pair(&name, scheme)?;
@@ -239,13 +251,6 @@ fn run(args: Cli) -> anyhow::Result<()> {
                 "{}",
                 essential_signer::encode_str(bytes, Encoding::HexUpper)?
             );
-        }
-        #[cfg(feature = "test-utils")]
-        Command::Temp { name, private_key } => {
-            let mut wallet = Wallet::temp()?;
-            let secret_key = SecretKey::from_str(&private_key.unwrap())?;
-            let key = essential_signer::Key::Secp256k1(secret_key);
-            wallet.insert_key(&name, key)?;
         }
     }
     Ok(())
