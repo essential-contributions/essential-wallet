@@ -140,7 +140,7 @@ pub fn sign_hash(hash: Hash, private_key: &Key) -> anyhow::Result<Signature> {
             let sig = essential_sign::sign_hash(hash, private_key);
             let sig = secp256k1::ecdsa::RecoverableSignature::from_compact(
                 &sig.0,
-                secp256k1::ecdsa::RecoveryId::from_i32(sig.1 as i32)?,
+                secp256k1::ecdsa::RecoveryId::try_from(sig.1 as i32)?,
             )?;
             Ok(Signature::Secp256k1(sig))
         }
@@ -269,7 +269,7 @@ pub fn to_essential_signature(
     let (rec_id, data) = sig.serialize_compact();
     Ok(essential_types::Signature(
         data,
-        rec_id.to_i32().try_into()?,
+        i32::from(rec_id).try_into()?,
     ))
 }
 
@@ -291,7 +291,7 @@ pub fn signature_to_bytes(sig: &Signature) -> anyhow::Result<Vec<u8>> {
         Signature::Secp256k1(sig) => {
             let (rec_id, data) = sig.serialize_compact();
             let mut bytes = data.to_vec();
-            let rec_id = rec_id.to_i32();
+            let rec_id: i32 = rec_id.into();
             let rec_id: u8 = rec_id.try_into()?;
             bytes.push(rec_id);
             Ok(bytes)
