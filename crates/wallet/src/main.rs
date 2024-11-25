@@ -1,11 +1,10 @@
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use anyhow::ensure;
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use essential_signer::{decode_str, read_file, Encoding, Padding, Signature};
 use essential_types::{contract::Contract, convert::bytes_from_word};
-use essential_wallet::{secp256k1::SecretKey, Scheme, Wallet};
+use essential_wallet::{Scheme, Wallet};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -17,10 +16,8 @@ struct Cli {
     /// If not set then a sensible default will be used (like ~/.essential-wallet).
     #[arg(short, long)]
     path: Option<PathBuf>,
-
-    #[cfg(feature = "test-utils")]
-    /// Non-interactive password input for test utilities
-    #[arg(long)]
+    /// Enables non-interactive password input
+    #[arg(long, global = true)]
     password: Option<String>,
 }
 
@@ -117,21 +114,13 @@ fn main() {
 fn run(args: Cli) -> anyhow::Result<()> {
     eprintln!("{}", WARNING);
 
-    let pass: String;
-
-    #[cfg(feature = "test-utils")]
-    {
-        if let Some(password) = args.password {
-            pass = password;
-        } else {
-            pass = rpassword::prompt_password("Enter password to unlock wallet: ").unwrap();
-        }
-    }
+    let pass = if let Some(password) = args.password {
+        password
+    } else {
+        rpassword::prompt_password("Enter password to unlock wallet: ")?
+    };
 
     // TODO: Not sure what to do for salt as it would need to be stored anyway
-    #[cfg(not(feature = "test-utils"))]
-    pass = rpassword::prompt_password("Enter password to unlock wallet: ").unwrap();
-
     let mut wallet = args
         .path
         .map(|p| Wallet::new(&pass, p))
