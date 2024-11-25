@@ -93,8 +93,8 @@ impl Wallet {
         let _ = s.insert_key(
             name,
             essential_signer::Key::Secp256k1(
-                essential_signer::secp256k1::SecretKey::from_slice(&private_key).unwrap()
-            )
+                essential_signer::secp256k1::SecretKey::from_slice(&private_key).unwrap(),
+            ),
         );
         Ok(())
     }
