@@ -66,7 +66,7 @@ enum Command {
     /// Print the public key.
     PrintPubKey {
         /// Hash the public key before printing.
-        #[arg(long)]
+        #[arg(short, long)]
         hashed: bool,
         /// The name of the key to print.
         name: String,
