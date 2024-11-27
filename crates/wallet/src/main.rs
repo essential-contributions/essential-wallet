@@ -19,6 +19,34 @@ struct Cli {
     /// Enables non-interactive password input
     #[arg(long, global = true)]
     password: Option<String>,
+
+    #[cfg(feature = "test-utils")]
+    /// Unlock with account name and private key
+    #[arg(long)]
+    unlock: Option<Unlock>,
+}
+
+#[cfg(feature = "test-utils")]
+#[derive(Debug, Clone)]
+struct Unlock {
+    account_name: String,
+    private_key: String,
+}
+
+#[cfg(feature = "test-utils")]
+impl std::str::FromStr for Unlock {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split(',').collect();
+        if parts.len() != 2 {
+            return Err("Unlock argument must be in the format 'account_name,private_key'".to_string());
+        }
+        Ok(Unlock {
+            account_name: parts[0].to_string(),
+            private_key: parts[1].to_string(),
+        })
+    }
 }
 
 #[derive(Subcommand)]
