@@ -16,6 +16,9 @@ struct Cli {
     /// If not set then a sensible default will be used (like ~/.essential-wallet).
     #[arg(short, long)]
     path: Option<PathBuf>,
+    /// Enables non-interactive password input
+    #[arg(long, global = true)]
+    password: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -111,13 +114,18 @@ fn main() {
 fn run(args: Cli) -> anyhow::Result<()> {
     eprintln!("{}", WARNING);
 
-    let pass = rpassword::prompt_password("Enter password to unlock wallet: ")?;
+    let pass = if let Some(password) = args.password {
+        password
+    } else {
+        rpassword::prompt_password("Enter password to unlock wallet: ")?
+    };
 
     // TODO: Not sure what to do for salt as it would need to be stored anyway
     let mut wallet = args
         .path
         .map(|p| Wallet::new(&pass, p))
         .unwrap_or_else(|| Wallet::with_default_path(&pass))?;
+
     match args.command {
         Command::Generate { name, scheme } => {
             wallet.new_key_pair(&name, scheme)?;
