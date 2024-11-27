@@ -84,7 +84,7 @@ impl Wallet {
 
     #[cfg(feature = "test-utils")]
     /// Create a temp wallet for testing via the cli with a name and private key, with hardcoded password and tempdir
-    pub fn temp_cli(name: &str, key: &str) -> anyhow::Result<()> {
+    pub fn temp_unlocked(name: &str, key: &str) -> anyhow::Result<Self> {
         let dir = tempfile::tempdir()?;
         let path = db_dir(Some(dir.path().to_path_buf()))?;
         let mut s = Self::new("password", path)?;
@@ -95,7 +95,7 @@ impl Wallet {
             essential_signer::Key::Secp256k1(            essential_signer::secp256k1::SecretKey::from_slice(&private_key).unwrap(),
             ),
         );
-        Ok(())
+        Ok(s)
     }
 
     #[cfg(feature = "test-utils")]
