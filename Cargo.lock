@@ -353,9 +353,9 @@ dependencies = [
 
 [[package]]
 name = "essential-hash"
-version = "0.7.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5583f27d3fe49100720d65207bbfc555111316a48246f50f9305c9db9b0ea08c"
+checksum = "20c4afe77fa9779e600216f8a6efb17329c194d3eeeef989a6001e749a296714"
 dependencies = [
  "essential-types",
  "postcard",
@@ -365,9 +365,9 @@ dependencies = [
 
 [[package]]
 name = "essential-sign"
-version = "0.7.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a0479a5b95a348740ea5d211a019cc8e7950588dea999da9afbaff9e7bd54dc"
+checksum = "28d46ba95598252156752cd6db17099536db65e1762a510051a29f9fca755d98"
 dependencies = [
  "essential-hash",
  "essential-types",
@@ -397,9 +397,9 @@ dependencies = [
 
 [[package]]
 name = "essential-types"
-version = "0.5.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7d7418cbf7dd2365e3ec9409a2c02375335530b5eb90bb39167e607f67ca869"
+checksum = "fb9ce67e642944ec19647a59f2b5c8848baa9af6884c5e4fe000e3b669dae7b9"
 dependencies = [
  "hex",
  "serde",
