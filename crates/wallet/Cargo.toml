@@ -1,6 +1,6 @@
 [package]
 name = "essential-wallet"
-version = "0.5.0"
+version = "0.6.0"
 description = "A wallet for storing pub/priv keypairs for testing purposes."
 edition.workspace = true
 authors.workspace = true
